@@ -340,6 +340,34 @@ case_vscode_missing() {
   check "import line still printed" grep -qF '.d2/themes/theme"' <<<"$OUT"
 }
 
+# A version-manager shim (asdf/pyenv) can sit first on PATH and fail when no version is set:
+# "No version is set for command python3", exit 126. setup.sh must fall back to a working Python.
+case_broken_python() {
+  local stub="$SB/stub" s="$SB_CODE/settings.json"
+  mkdir -p "$stub"
+  printf '#!/usr/bin/env bash
+echo "No version is set for command python3" >&2
+exit 126
+' > "$stub/python3"
+  chmod +x "$stub/python3"
+  run_setup_path "$stub" 0
+  check "exit code 0 with a broken python3 first on PATH (got $RC)" [ "$RC" -eq 0 ]
+  check "settings.json still written via the fallback Python" [ -s "$s" ]
+  check "says which Python it fell back to" grep -q "Python:" <<<"$OUT"
+  # No working Python at all (only testable where /usr/bin/python3 is absent or broken, e.g. Git Bash)
+  if ! /usr/bin/python3 -c 'import sys' >/dev/null 2>&1; then
+    rm -rf "$SB_CODE"; mkdir -p "$SB_CODE"
+    printf '#!/usr/bin/env bash
+exit 1
+' > "$stub/uv"; chmod +x "$stub/uv"
+    run_setup_path "$stub" 0
+    check "no working Python: exit non-zero (got $RC)" [ "$RC" -ne 0 ]
+    check "no working Python: clear message with the fixes" bash -c 'grep -q "No working Python 3" <<<"$1" && grep -q "asdf" <<<"$1" && grep -q "xcode-select --install" <<<"$1"' _ "$OUT"
+    check "no working Python: settings.json not created" [ ! -e "$s" ]
+    check "no working Python: d2t wrapper still installed" [ -f "$SB_HOME/.d2/bin/d2t" ]
+  fi
+}
+
 case_old_d2() {
   local stub="$SB/stub"
   mkdir -p "$stub"
@@ -399,6 +427,7 @@ test_case "themes: terminal variants compile by absolute import; bare d2 uses Ta
 test_case "snippets: d2theme* snippets written, user snippets kept, bodies compile" case_snippets
 test_case "vscode missing: editor steps skipped, Code/User not created, rest still runs" case_vscode_missing
 test_case "toolchain: old D2 without Tala gets an upgrade hint; real D2 reports OK" case_old_d2
+test_case "python: broken python3 shim (asdf) falls back; none at all gives a clear error" case_broken_python
 test_case "links: re-point links only; never replace a real directory" case_links
 
 # ---- result ------------------------------------------------------------------------

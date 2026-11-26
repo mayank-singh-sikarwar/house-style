@@ -31,7 +31,9 @@ Logos, gear marks and the Feather icon set are embedded in the CSS, so a theme f
 ## 1. Set up once per machine
 
 Requirements: VS Code with the **Marp** (`marp-team.marp-vscode`) and **D2** (`terrastruct.d2`) extensions,
-**D2 ≥ 0.9.0** (it bundles the Tala layout engine), and Node.js for PDF export.
+**D2 ≥ 0.9.0** (it bundles the Tala layout engine), and Node.js for PDF export. On macOS, `setup.sh` also needs
+a working Python 3: it uses the first that runs of `python3`, `/usr/bin/python3` (Command Line Tools) and `uv`,
+so an asdf or pyenv shim with no version set is skipped.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1     # Windows

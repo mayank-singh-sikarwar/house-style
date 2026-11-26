@@ -70,7 +70,32 @@ fi
 #    String-aware parse, abort a file on parse failure, no-op when unchanged,
 #    timestamped backup before write, atomic replace.
 # -----------------------------------------------------------------------------
-if [[ "$VSCODE_PRESENT" == 1 ]] && ! python3 - <<'EOF'
+#    Python: the first that actually runs. A version-manager shim (asdf, pyenv) can be first on PATH and
+#    fail with no version set ("No version is set for command python3", exit 126), so try the system
+#    Python and uv after it.
+PY=()
+if [[ "$VSCODE_PRESENT" == 1 ]]; then
+    for c in python3 /usr/bin/python3; do
+        if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+            PY=("$c"); break
+        fi
+    done
+    if [[ ${#PY[@]} -eq 0 ]] && command -v uv >/dev/null 2>&1 && uv run --no-project --quiet python -c 'import sys' >/dev/null 2>&1; then
+        PY=(uv run --no-project --quiet python)
+    fi
+    if [[ ${#PY[@]} -eq 0 ]]; then
+        echo "[x] No working Python 3: VS Code settings, tasks and snippets were not changed."
+        echo "    'python3' is missing or fails. Fix one of these, then re-run setup:"
+        echo "      - asdf: set a version, e.g. 'asdf set -u python 3.11.4' (pyenv: 'pyenv global 3.11.4')"
+        echo "      - macOS: install the Command Line Tools: 'xcode-select --install'"
+        echo "      - or install uv: https://docs.astral.sh/uv/"
+        EXIT_CODE=1
+        VSCODE_PRESENT=0
+    else
+        echo "[i] Python: ${PY[*]}"
+    fi
+fi
+if [[ "$VSCODE_PRESENT" == 1 ]] && ! "${PY[@]}" - <<'EOF'
 import copy, json, os, shutil, sys, tempfile, time
 
 code_dir = os.environ["CODE_USER_DIR"]
