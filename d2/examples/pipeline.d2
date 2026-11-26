@@ -1,0 +1,13 @@
+# Weakly supervised pipeline — light theme. For a dark slide, change the import to ...@../theme-dark
+...@../theme
+
+data: Raw data {class: store}
+pieces: Pieces
+feat: Features {class: primary}
+model: Small model {class: primary-solid}
+out: Scores {class: ok}
+
+data -> pieces: split
+pieces -> feat: pretrained model {class: soft}
+feat -> model
+model -> out

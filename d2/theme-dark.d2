@@ -1,0 +1,56 @@
+# theme-dark.d2 — for dark slides (phd / work `dark` class). Same classes as theme.d2.
+vars: {
+  pal: {
+    # neutrals (white → ink)
+    ink: "#FFFFFF"
+    muted: "#A8A8A8"
+    line: "#8E979F"
+    mid: "#8E979F"
+    n4: "#2A2A2A"
+    n5: "#2A2A2A"
+    mist: "#232323"
+    paper: "#1A1A1A"
+    card: "#2A2A2A"
+    strong: "#F4F6F7"
+    on-strong: "#1A1A1A"
+    # accents (semantic) — bright variants for dark grounds
+    primary: "#7FDCC8"
+    primary-soft: "#2A3936"
+    secondary: "#BD93F9"
+    secondary-soft: "#342D3E"
+    ok: "#50FA7B"
+    ok-soft: "#233E2A"
+    warn: "#F2C230"
+    warn-soft: "#3D351E"
+    danger: "#FFB86C"
+    danger-soft: "#3F3327"
+    on-accent: "#1A1A1A"
+    on-warn: "#1A1A1A"
+  }
+  d2-config: {
+    theme-id: 0
+    layout-engine: tala
+    pad: 24
+    theme-overrides: {
+      N1: ${pal.ink}
+      N2: ${pal.muted}
+      N3: ${pal.mid}
+      N4: ${pal.n4}
+      N5: ${pal.n5}
+      N6: ${pal.mist}
+      N7: ${pal.paper}
+      B1: ${pal.line}
+      B2: ${pal.muted}
+      B3: ${pal.card}
+      B4: ${pal.mist}
+      B5: ${pal.card}
+      B6: ${pal.card}
+      AA2: ${pal.muted}
+      AA4: ${pal.card}
+      AA5: ${pal.mist}
+      AB4: ${pal.card}
+      AB5: ${pal.mist}
+    }
+  }
+}
+...@core

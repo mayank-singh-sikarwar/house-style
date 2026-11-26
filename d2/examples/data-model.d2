@@ -1,0 +1,13 @@
+# Data spine — Programme → Project → Dataset → File, with Owner and Format hanging off.
+...@../theme
+
+programme: Programme {class: secondary}
+project: Project {class: secondary}
+dataset: Dataset {class: secondary}
+file: File {class: secondary}
+programme -> project -> dataset -> file
+
+owner: Owner {class: actor}
+format: Format
+dataset -> owner: each dataset → one owner {class: soft}
+file -> format: each file → one format {class: soft}

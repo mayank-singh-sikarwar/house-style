@@ -1,0 +1,45 @@
+# core.d2 — shared geometry, defaults and classes. Colours come from ${pal.*} in the theme file.
+# Not used directly: import theme.d2 or theme-dark.d2.
+
+# ---- defaults (one place for every diagram) ----
+direction: right
+style.fill: transparent # diagram background: shows the slide
+***.style.stroke-width: 1
+***.style.border-radius: 8
+(*** -> ***)[*].style.border-radius: 8
+
+classes: {
+  # ---- emphasis: soft = tint fill + accent stroke ----
+  primary: {style: {fill: ${pal.primary-soft}; stroke: ${pal.primary}}}
+  secondary: {style: {fill: ${pal.secondary-soft}; stroke: ${pal.secondary}}}
+  ok: {style: {fill: ${pal.ok-soft}; stroke: ${pal.ok}}}
+  warn: {style: {fill: ${pal.warn-soft}; stroke: ${pal.warn}}}
+  danger: {style: {fill: ${pal.danger-soft}; stroke: ${pal.danger}}}
+
+  # ---- emphasis: solid = accent fill ----
+  primary-solid: {style: {fill: ${pal.primary}; stroke: ${pal.primary}; font-color: ${pal.on-accent}}}
+  secondary-solid: {style: {fill: ${pal.secondary}; stroke: ${pal.secondary}; font-color: ${pal.on-accent}}}
+  ok-solid: {style: {fill: ${pal.ok}; stroke: ${pal.ok}; font-color: ${pal.on-accent}}}
+  warn-solid: {style: {fill: ${pal.warn}; stroke: ${pal.warn}; font-color: ${pal.on-warn}}}
+  danger-solid: {style: {fill: ${pal.danger}; stroke: ${pal.danger}; font-color: ${pal.on-accent}}}
+
+  # ---- neutrals ----
+  ink: {style: {fill: ${pal.strong}; stroke: ${pal.strong}; font-color: ${pal.on-strong}}}
+  muted: {style: {stroke-dash: 4; font-color: ${pal.muted}; stroke: ${pal.muted}}}
+  ghost: {style: {fill: transparent; stroke-dash: 4}}
+
+  # ---- roles ----
+  store: {shape: cylinder}
+  actor: {shape: person}
+  doc: {shape: page}
+  step: {shape: step}
+  decide: {shape: diamond}
+  label: {shape: text; style: {font-color: ${pal.muted}; font-size: 14}}
+  group: {style: {bold: true; font-size: 18}}
+
+  # ---- connections ----
+  flow: {style: {stroke: ${pal.line}}}
+  accent: {style: {stroke: ${pal.primary}; stroke-width: 3}}
+  soft: {style: {stroke-dash: 4; stroke: ${pal.muted}}}
+  strong: {style: {stroke: ${pal.strong}; stroke-width: 3}}
+}

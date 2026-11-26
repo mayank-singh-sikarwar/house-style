@@ -1,0 +1,55 @@
+# theme.d2 — light. Import at the very top of a diagram:   ...@../path/to/theme
+vars: {
+  pal: {
+    # neutrals (ink → white)
+    ink: "#1A1A1A"
+    muted: "#5B6670"
+    line: "#5B6670"
+    mid: "#8E979F"
+    n4: "#FFFFFF"
+    n5: "#FFFFFF"
+    mist: "#F4F6F7"
+    paper: "#FFFFFF"
+    strong: "#1A1A1A"
+    on-strong: "#FFFFFF"
+    # accents (semantic)
+    primary: "#3B6EA5"
+    primary-soft: "#E7EEF4"
+    secondary: "#6C4BC9"
+    secondary-soft: "#EDE9F9"
+    ok: "#3F9B6B"
+    ok-soft: "#E8F3ED"
+    warn: "#F2A93C"
+    warn-soft: "#FDF5E8"
+    danger: "#C1512F"
+    danger-soft: "#F8EAE6"
+    on-accent: "#FFFFFF"
+    on-warn: "#1A1A1A"
+  }
+  d2-config: {
+    theme-id: 0
+    layout-engine: tala
+    pad: 24
+    theme-overrides: {
+      N1: ${pal.ink}
+      N2: ${pal.muted}
+      N3: ${pal.mid}
+      N4: ${pal.n4}
+      N5: ${pal.n5}
+      N6: ${pal.mist}
+      N7: ${pal.paper}
+      B1: ${pal.line}
+      B2: ${pal.muted}
+      B3: ${pal.paper}
+      B4: ${pal.mist}
+      B5: ${pal.paper}
+      B6: ${pal.paper}
+      AA2: ${pal.muted}
+      AA4: ${pal.paper}
+      AA5: ${pal.mist}
+      AB4: ${pal.paper}
+      AB5: ${pal.mist}
+    }
+  }
+}
+...@core

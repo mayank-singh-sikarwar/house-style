@@ -1,0 +1,25 @@
+# Where a fix can act — four tiers, one example each.
+...@../theme
+
+direction: right
+data: Data level {
+  class: group
+  a: Input normalisation
+  b: Augmentation
+}
+feature: Feature level {
+  class: group
+  a: Feature rescaling
+  b: Latent alignment
+}
+model: Training level {
+  class: group
+  a: Adversarial objective {class: primary-solid}
+  b: Gradient reversal {class: primary}
+  a -> b
+}
+none: Not addressed {
+  class: [group; muted]
+  a: Larger pretrained models {class: ghost}
+}
+data -> feature -> model

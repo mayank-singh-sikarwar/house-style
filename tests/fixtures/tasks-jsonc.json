@@ -1,0 +1,9 @@
+{
+  // user tasks
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "my build", "type": "shell", "command": "make", "args": ["all"], "problemMatcher": ["$gcc"] },
+    { "label": "house-style: Export Marp Deck to PDF", "type": "shell", "command": "old" },
+    { "label": "my test", "type": "shell", "command": "make test", },
+  ],
+}

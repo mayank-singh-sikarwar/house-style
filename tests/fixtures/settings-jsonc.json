@@ -1,0 +1,16 @@
+{
+  // leading line comment
+  "editor.fontSize": 14, /* inline block comment */
+  "search.exclude": { "dist/*.map": true },
+  "files.exclude": { "**/.git": true, "out/**": true },
+  "my.note": "see // docs",
+  "my.url": "https://example.com/a/*b",
+  "my.quote": "it's \"quoted\" \\ back",
+  "my.single": ["only"],
+  "my.empty": [],
+  "my.emptyObj": {},
+  "my.nested": { "a": [1, 2, { "b": null }], },
+  "markdown.marp.themes": ["C:/other/custom.css", "C:/old/place/themes/phd.css", "https://raw.githubusercontent.com/x/house-style/main/themes/dtp.css", "C:/old/place/themes/splice.css"],
+  /* trailing
+     block comment */
+}
