@@ -111,7 +111,7 @@ Test-Case 'jsonc: comments, trailing commas, globs and // in strings all survive
     $themes = @($s.'markdown.marp.themes')
     Assert ($themes[0] -eq 'C:/other/custom.css') 'unrelated Marp theme kept first'
     Assert (-not ($themes -match '/old/place/')) 'stale phd.css path from old location replaced'
-    Assert ($themes.Count -eq 3) "3 themes total: custom + phd + work (got $($themes.Count))"
+    Assert ($themes.Count -eq 4) "4 themes total: custom + phd + work + classic (got $($themes.Count))"
     Assert (-not ($themes -match '(dtp|splice).css$')) 'retired dtp/splice entries removed'
     Assert ((Get-Backups $sb).Count -eq 1) 'exactly one backup of settings.json'
 }
@@ -154,7 +154,7 @@ Test-Case 'tasks: user tasks survive in order; house-style tasks replaced, not d
     $labels = @($t.tasks | ForEach-Object { $_.label })
     Assert ($labels[0] -eq 'my build' -and $labels[1] -eq 'my test') "user tasks first, in order (got: $($labels -join ' | '))"
     Assert (@($t.tasks[0].args).Count -eq 1 -and @($t.tasks[0].problemMatcher)[0] -eq '$gcc') 'one-element arrays in user task kept'
-    Assert (@($labels | Where-Object { $_ -like 'house-style:*' }).Count -eq 2) 'exactly two house-style tasks'
+    Assert (@($labels | Where-Object { $_ -like 'house-style:*' }).Count -eq 3) 'exactly three house-style tasks (no duplicates)'
 }
 
 Test-Case 'idempotent: second run writes nothing and makes no new backups' {
@@ -198,7 +198,7 @@ function Get-SetupThemes($sb, [string[]]$Extra) {
     $s = Read-Json (Join-Path $sb.CodeDir 'settings.json')
     return [PSCustomObject]@{ ExitCode = $r.ExitCode; Output = $r.Output; Themes = (@($s.'markdown.marp.themes') -join '|') }
 }
-function Join-Themes([string]$Base) { (@('phd', 'work') | ForEach-Object { "$Base/$_.css" }) -join '|' }
+function Join-Themes([string]$Base) { (@('phd', 'work', 'classic') | ForEach-Object { "$Base/$_.css" }) -join '|' }
 
 Test-Case 'marp themes: https URLs from the GitHub remote (https and ssh forms), override, fallback' {
     param($sb)
@@ -234,7 +234,27 @@ Test-Case 'tasks: absolute wrapper command, themed and pinned Marp export' {
     Assert ($i -ge 0 -and $a[$i + 1] -eq ($RepoRoot.Replace('\', '/') + '/themes')) "--theme-set points at repo themes (got $($a -join ' '))"
     Assert ($a -contains '--pdf' -and $a -contains '--allow-local-files') 'pdf flags kept'
     # The user's default terminal may be Git Bash, which eats the backslashes in the command and ${file}.
-    foreach ($task in @($d2, $marp)) {
+    # Live preview: d2t --watch on the open file (Tala via d2t's default, so no --layout), as a background task
+    $pv = $t.tasks | Where-Object { $_.label -eq 'house-style: Preview D2 (live, Tala + Arial)' }
+    Assert ($null -ne $pv) 'preview task present'
+    if ($null -ne $pv) {
+        Assert ($pv.command -eq $d2.command) 'preview task uses the same absolute d2t.cmd'
+        Assert ((@($pv.args) -join ' ') -eq '--watch ${file} ${fileDirname}/${fileBasenameNoExtension}.svg') "preview args (got $(@($pv.args) -join ' '))"
+        Assert (-not ((@($pv.args) -join ' ') -match '--layout|-l ')) 'preview passes no --layout (d2t defaults to Tala)'
+        Assert ($pv.isBackground -eq $true) 'preview is a background task'
+        $bg = $pv.problemMatcher.background
+        $pat = $pv.problemMatcher.pattern
+        # Lines as d2 v0.9.0 prints them in --watch mode
+        Assert ('info: compiling pipeline.d2...' -match $bg.beginsPattern) 'background beginsPattern matches d2 "compiling" line'
+        Assert ('info: detected change in pipeline.d2: recompiling...' -match $bg.beginsPattern) 'beginsPattern matches the recompile-on-save line'
+        Assert ('success: successfully compiled pipeline.d2 to C:/x/pipeline.svg in 51ms' -match $bg.endsPattern) 'endsPattern matches a successful compile'
+        $errLine = 'err: failed to compile bad.d2: C:\x\bad.d2:1:1: connection missing destination'
+        Assert ($errLine -match $bg.endsPattern) 'endsPattern matches a failed compile'
+        $m = [regex]::Match($errLine, $pat.regexp)
+        Assert ($m.Success -and $m.Groups[$pat.file].Value -eq 'C:\x\bad.d2' -and $m.Groups[$pat.line].Value -eq '1' -and $m.Groups[$pat.message].Value -eq 'connection missing destination') 'error pattern extracts file, line and message'
+    }
+    foreach ($task in @($d2, $marp, $pv)) {
+        if ($null -eq $task) { continue }
         Assert ($task.options.shell.executable -eq 'cmd.exe' -and (@($task.options.shell.args) -join ' ') -eq '/d /c') "$($task.label): pins cmd.exe as its shell"
     }
 }
@@ -291,15 +311,26 @@ Test-Case 'themes: terminal variants compile by absolute import; bare d2 uses Ta
     $ErrorActionPreference = 'Continue'   # d2 logs to stderr
     $themes = ($RepoRoot.Replace('\', '/')) + '/d2'
     $svg = @{}
-    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark')) {
+    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark', 'theme-colour', 'theme-colour-dark', 'theme-colour-terminal', 'theme-colour-terminal-dark')) {
         $f = Join-Path $sb.Root "$v.d2"
-        Set-Content -Path $f -Encoding ASCII -Value "...@`"$themes/$v`"`na: Slide {class: store}`nb: Model {class: primary-solid}`na -> b"
+        Set-Content -Path $f -Encoding ASCII -Value "...@`"$themes/$v`"`na: Slide {class: store}`nb: Model {class: primary-solid}`na -> b`ng: Group {c: Card; d: Db {shape: cylinder}; p: Doc {shape: page}}"
         & d2 $f (Join-Path $sb.Root "$v.svg") *> $null
         $svg[$v] = if (Test-Path (Join-Path $sb.Root "$v.svg")) { [IO.File]::ReadAllText((Join-Path $sb.Root "$v.svg")) } else { '' }
         Assert ($svg[$v].Length -gt 0) "$v compiles from an absolute import"
     }
     Assert ($svg['theme-terminal'] -match 'mono' -and $svg['theme-terminal-dark'] -match 'mono') 'terminal variants use a monospace font'
     Assert ($svg['theme'] -notmatch 'mono') 'base theme does not'
+    # Colour variants tint an unclassed container (B4 -> primary-soft) and stroke lines in primary; base stays grey
+    foreach ($v in @('theme-colour', 'theme-colour-terminal')) {
+        Assert ($svg[$v] -match '#E7EEF4' -and $svg[$v] -match '#3B6EA5') "$v tints default containers and lines"
+        # shapes nested in a container use AA5 / AB5 (top-level ones use AA4 / AB4)
+        Assert ($svg[$v] -match 'fill="#E8F3ED" class="[^"]*fill-AA5') "$v tints nested cylinders (AA5 -> ok-soft)"
+        Assert ($svg[$v] -match 'fill="#FDF5E8" class="[^"]*fill-AB5') "$v tints nested pages (AB5 -> warn-soft)"
+    }
+    Assert ($svg['theme-colour-terminal'] -match 'mono' -and $svg['theme-colour-terminal-dark'] -match 'mono') 'colour-terminal variants use a monospace font'
+    Assert ($svg['theme-colour'] -notmatch 'mono') 'colour variant keeps Arial-style (no monospace)'
+    Assert ($svg['theme'] -notmatch '#E7EEF4') 'base theme leaves default containers untinted'
+    Assert ($svg['theme-colour-dark'] -ne $svg['theme-dark']) 'dark colour variant differs from dark base'
     # Bare d2 (no --layout, no D2_LAYOUT) must match an explicit --layout tala render
     $f = Join-Path $sb.Root 'theme.d2'; $oldLayout = $env:D2_LAYOUT; $env:D2_LAYOUT = $null
     & d2 $f (Join-Path $sb.Root 'bare.svg') *> $null
@@ -324,7 +355,7 @@ Test-Case 'snippets: d2theme* snippets written, user snippets kept, bodies compi
     $homeFwd = $sb.HomeDir.Replace('\', '/')
     $all = @($sn.PSObject.Properties | ForEach-Object { $_.Value })
     $ErrorActionPreference = 'Continue'
-    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark')) {
+    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark', 'theme-colour', 'theme-colour-dark', 'theme-colour-terminal', 'theme-colour-terminal-dark')) {
         $s = $all | Where-Object { $_.prefix -eq ('d2' + $v) }
         Assert ($null -ne $s) "snippet with prefix d2$v exists"
         if ($null -eq $s) { continue }

@@ -17,7 +17,7 @@ param(
     [switch]$NoPath,
     # Tests only: a text file that stands in for the User PATH (read and written instead of the real one).
     [string]$UserPathFile,
-    # Base URL that holds phd.css / work.css. Default: derived from the GitHub remote.
+    # Base URL that holds phd.css / work.css / classic.css. Default: derived from the GitHub remote.
     [string]$ThemeBaseUrl,
     # Tests only: stands in for `git remote get-url origin`.
     [string]$GitRemoteUrl
@@ -215,14 +215,14 @@ if (-not $themeBase) {
     Write-Host "[!] No GitHub remote found: Marp live preview will not show the house themes (PDF export still will)." -ForegroundColor Yellow
     Write-Host "    Re-run with -ThemeBaseUrl https://<host>/<path-to>/themes" -ForegroundColor Yellow
 }
-$marpThemes = @('phd', 'work') | ForEach-Object { "$themeBase/$_.css" }
+$marpThemes = @('phd', 'work', 'classic') | ForEach-Object { "$themeBase/$_.css" }
 
 $result = Update-JsonFile $settingsPath {
     param($s)
     # Keep non-house themes in order; replace old phd/work paths (repo moves) and drop the retired dtp/splice themes
     $existing = @()
     if ($s.PSObject.Properties['markdown.marp.themes']) { $existing = @($s.'markdown.marp.themes') }
-    $kept = @($existing | Where-Object { $_ -notmatch '(?i)(/|\\)(dtp|phd|splice|work)\.css$' })
+    $kept = @($existing | Where-Object { $_ -notmatch '(?i)(/|\\)(dtp|phd|splice|work|classic)\.css$' })
     Set-JsonProperty $s 'markdown.marp.themes' (@($kept + $marpThemes))
     Set-JsonProperty $s 'markdown.marp.enableHtml' $true
     # D2 extension (terrastruct.d2) preview layout; 'd2.layout' was a rev-1 key no extension reads
@@ -356,6 +356,38 @@ $marpTask = [PSCustomObject]@{
     problemMatcher = @()
 }
 
+# Live preview: d2t --watch serves a browser page that reloads on every save. d2t defaults to Tala,
+# so no --layout. Background matcher: one compile cycle = "info: compiling" or "info: detected change" .. success/err line;
+# d2 errors ("err: failed to compile x.d2: <path>:<line>:<col>: <msg>") go to the Problems panel.
+$d2PreviewTask = [PSCustomObject]@{
+    label          = "house-style: Preview D2 (live, Tala + Arial)"
+    type           = "shell"
+    command        = (Join-Path $d2BinDir 'd2t.cmd')
+    args           = @('--watch', '${file}', '${fileDirname}/${fileBasenameNoExtension}.svg')
+    options        = $taskShell
+    isBackground   = $true
+    presentation   = [PSCustomObject]@{
+        reveal = "always"
+        panel  = "dedicated"
+    }
+    problemMatcher = [PSCustomObject]@{
+        owner        = "d2"
+        fileLocation = @("absolute")
+        pattern      = [PSCustomObject]@{
+            regexp  = '^err: failed to compile .*?: (.*):(\d+):(\d+): (.*)$'
+            file    = 1
+            line    = 2
+            column  = 3
+            message = 4
+        }
+        background   = [PSCustomObject]@{
+            activeBegin   = $true
+            beginsPattern = '^info: (compiling |detected change)'
+            endsPattern   = '^(success: successfully compiled |err: )'
+        }
+    }
+}
+
 $result = Update-JsonFile $tasksPath {
     param($t)
     $existing = @()
@@ -363,7 +395,7 @@ $result = Update-JsonFile $tasksPath {
         $existing = @($t.tasks | Where-Object { "$($_.label)" -notmatch '^(house-style:|D2: Export SVG|Marp: Export)' })
     }
     if (-not $t.PSObject.Properties['version']) { Set-JsonProperty $t 'version' '2.0.0' }
-    Set-JsonProperty $t 'tasks' (@($existing) + @($d2Task, $marpTask))
+    Set-JsonProperty $t 'tasks' (@($existing) + @($d2Task, $d2PreviewTask, $marpTask))
     return $t
 }
 Write-FileResult 'VS Code User Tasks' $tasksPath $result
@@ -385,7 +417,7 @@ $result = Update-JsonFile $snippetsPath {
     foreach ($p in @($sn.PSObject.Properties | Where-Object { $_.Name -like 'house-style:*' })) {
         $sn.PSObject.Properties.Remove($p.Name)
     }
-    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark')) {
+    foreach ($v in @('theme', 'theme-dark', 'theme-terminal', 'theme-terminal-dark', 'theme-colour', 'theme-colour-dark', 'theme-colour-terminal', 'theme-colour-terminal-dark')) {
         Set-JsonProperty $sn "house-style: import $v" ([PSCustomObject]@{
             prefix      = "d2$v"
             body        = @("...@`"$homeFwd/.d2/themes/$v`"")
@@ -396,7 +428,7 @@ $result = Update-JsonFile $snippetsPath {
 }
 Write-FileResult 'VS Code D2 snippets' $snippetsPath $result
 if ($result -notin @('failed', 'skipped')) {
-    Write-Host "    - d2theme, d2theme-dark, d2theme-terminal, d2theme-terminal-dark"
+    Write-Host "    - d2theme, d2theme-dark, d2theme-terminal, d2theme-terminal-dark, d2theme-colour (+ -dark / -terminal / -terminal-dark)"
 }
 
 # -----------------------------------------------------------------------------
@@ -438,8 +470,8 @@ Write-Host "`n====================================================" -ForegroundC
 Write-Host "  Setup Complete!                                   " -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host "How to use in any repository without .vscode files:"
-Write-Host "1. Marp Slides: add 'theme: phd' or 'theme: work' to frontmatter."
-Write-Host "2. D2 Diagrams: in a .d2 file type 'd2theme' (or d2theme-dark / d2theme-terminal / d2theme-terminal-dark),"
+Write-Host "1. Marp Slides: add 'theme: phd', 'theme: work' or 'theme: classic' to frontmatter."
+Write-Host "2. D2 Diagrams: in a .d2 file type 'd2theme' (or d2theme-dark / -terminal / -colour ... variants),"
 Write-Host "   or put this line at the top:  $importLine"
 Write-Host "3. Export: run 'Ctrl+Shift+P' -> 'Tasks: Run Task' -> select export task."
 

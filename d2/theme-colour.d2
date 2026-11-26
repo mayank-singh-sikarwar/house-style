@@ -1,0 +1,19 @@
+# theme-colour.d2 - light house palette with colour by default: shapes without a class get tinted.
+# Opt-in alternative to theme.d2 (which stays minimal: colour only through classes). Classes still win.
+# Import at the very top of a diagram:   ...@"<HOME>/.d2/themes/theme-colour"
+...@theme
+vars: {
+  d2-config: {
+    theme-overrides: {
+      B1: ${pal.primary}          # strokes and arrowheads
+      B4: ${pal.primary-soft}     # containers, depth 1
+      B5: ${pal.secondary-soft}   # containers, depth 2
+      B3: ${pal.secondary-soft}   # person
+      AA4: ${pal.ok-soft}         # cylinder, package (top level)
+      AA5: ${pal.ok-soft}         # cylinder, package (nested)
+      AB4: ${pal.warn-soft}       # page, step, document (top level)
+      AB5: ${pal.warn-soft}       # page, step, document (nested)
+      N4: ${pal.warn-soft}        # diamond
+    }
+  }
+}

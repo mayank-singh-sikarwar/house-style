@@ -138,7 +138,7 @@ case_jsonc() {
   check "nested null kept" json_true "$s" 'd["my.nested"] == {"a": [1, 2, {"b": None}]}'
   check "unrelated Marp theme kept first" json_true "$s" 'd["markdown.marp.themes"][0] == "C:/other/custom.css"'
   check "stale phd.css path replaced" json_true "$s" 'not any("/old/place/" in t for t in d["markdown.marp.themes"])'
-  check "3 themes total: custom + phd + work" json_true "$s" 'len(d["markdown.marp.themes"]) == 3'
+  check "4 themes total: custom + phd + work + classic" json_true "$s" 'len(d["markdown.marp.themes"]) == 4'
   check "retired dtp/splice entries removed" json_true "$s" 'not any(t.endswith(("dtp.css", "splice.css")) for t in d["markdown.marp.themes"])'
   check "exactly one backup of settings.json" [ "$(backups)" -eq 1 ]
 }
@@ -163,7 +163,7 @@ case_tasks() {
   local t="$SB_CODE/tasks.json"
   check "user tasks first, in order" json_true "$t" '[x["label"] for x in d["tasks"]][:2] == ["my build", "my test"]'
   check "one-element arrays in user task kept" json_true "$t" 'd["tasks"][0]["args"] == ["all"] and d["tasks"][0]["problemMatcher"] == ["$gcc"]'
-  check "exactly two house-style tasks" json_true "$t" 'sum(x["label"].startswith("house-style:") for x in d["tasks"]) == 2'
+  check "exactly three house-style tasks (no duplicates)" json_true "$t" 'sum(x["label"].startswith("house-style:") for x in d["tasks"]) == 3'
 }
 
 case_idempotent() {
@@ -196,8 +196,8 @@ case_settings_keys() {
 }
 
 # Marp for VS Code only loads https URLs or workspace paths: themes come from the GitHub remote.
-themes_are() {   # themes_are <base>: settings.json lists <base>/{phd,work}.css
-  json_true "$SB_CODE/settings.json" "d['markdown.marp.themes'] == ['$1/' + x + '.css' for x in ('phd', 'work')]"
+themes_are() {   # themes_are <base>: settings.json lists <base>/{phd,work,classic}.css
+  json_true "$SB_CODE/settings.json" "d['markdown.marp.themes'] == ['$1/' + x + '.css' for x in ('phd', 'work', 'classic')]"
 }
 setup_with_remote() {   # setup_with_remote <remote> [THEME_BASE_URL]; sets RC, OUT
   OUT="$(GIT_REMOTE_URL="$1" THEME_BASE_URL="${2:-}" CODE_USER_DIR="$SB_CODE" HOME_DIR="$SB_HOME" NO_PATH=1 bash "$SETUP" 2>&1)"
@@ -232,6 +232,13 @@ case_tasks_contents() {
   check "--theme-set points at repo themes" json_true "$t" \
     "(lambda a: a[a.index('--theme-set') + 1] == '$(native "$REPO_ROOT")/themes')($mp[0]['args'])"
   check "pdf flags kept" json_true "$t" "'--pdf' in $mp[0]['args'] and '--allow-local-files' in $mp[0]['args']"
+  # Live preview: d2t --watch on the open file (Tala via d2t's default), as a background task
+  local pv='[x for x in d["tasks"] if x["label"] == "house-style: Preview D2 (live, Tala + Arial)"]'
+  check "preview task present" json_true "$t" "len($pv) == 1"
+  check "preview task uses the same absolute d2t" json_true "$t" "$pv[0]['command'] == $d2[0]['command']"
+  check "preview args" json_true "$t" "$pv[0]['args'] == ['--watch', '\${file}', '\${fileDirname}/\${fileBasenameNoExtension}.svg']"
+  check "preview is a background task" json_true "$t" "$pv[0]['isBackground'] is True"
+  check "preview matcher fits d2 watch output" json_true "$t" "(lambda m, re=__import__('re'): bool(re.search(m['background']['beginsPattern'], 'info: compiling a.d2...')) and bool(re.search(m['background']['beginsPattern'], 'info: detected change in a.d2: recompiling...')) and bool(re.search(m['background']['endsPattern'], 'success: successfully compiled a.d2 to a.svg in 5ms')) and bool(re.search(m['background']['endsPattern'], 'err: failed to compile a.d2: /x/a.d2:1:1: boom')) and re.search(m['pattern']['regexp'], 'err: failed to compile a.d2: /x/a.d2:3:7: boom').group(m['pattern']['file'], m['pattern']['line'], m['pattern']['message']) == ('/x/a.d2', '3', 'boom'))($pv[0]['problemMatcher'])"
 }
 
 # ---- d2t.sh wrapper ----------------------------------------------------------------
@@ -275,13 +282,24 @@ case_themes() {
   command -v d2 >/dev/null 2>&1 || { echo "    (skipped: d2 not installed)"; return; }
   local themes v
   themes="$(native "$REPO_ROOT")/d2"
-  for v in theme theme-dark theme-terminal theme-terminal-dark; do
-    printf '...@"%s/%s"\na: Slide {class: store}\nb: Model {class: primary-solid}\na -> b\n' "$themes" "$v" > "$SB/$v.d2"
+  for v in theme theme-dark theme-terminal theme-terminal-dark theme-colour theme-colour-dark theme-colour-terminal theme-colour-terminal-dark; do
+    printf '...@"%s/%s"\na: Slide {class: store}\nb: Model {class: primary-solid}\na -> b\ng: Group {c: Card; d: Db {shape: cylinder}; p: Doc {shape: page}}\n' "$themes" "$v" > "$SB/$v.d2"
     d2 "$SB/$v.d2" "$SB/$v.svg" >/dev/null 2>&1
     check "$v compiles from an absolute import" [ -s "$SB/$v.svg" ]
   done
   check "terminal variants use a monospace font" bash -c 'grep -qi mono "$1" && grep -qi mono "$2"' _ "$SB/theme-terminal.svg" "$SB/theme-terminal-dark.svg"
   check "base theme does not" bash -c '! grep -qi mono "$1"' _ "$SB/theme.svg"
+  # Colour variants tint an unclassed container (B4 -> primary-soft) and stroke lines in primary; base stays grey
+  for v in theme-colour theme-colour-terminal; do
+    check "$v tints default containers and lines" bash -c 'grep -q "#E7EEF4" "$1" && grep -q "#3B6EA5" "$1"' _ "$SB/$v.svg"
+    # shapes nested in a container use AA5 / AB5 (top-level ones use AA4 / AB4)
+    check "$v tints nested cylinders (AA5 -> ok-soft)" grep -qE 'fill="#E8F3ED" class="[^"]*fill-AA5' "$SB/$v.svg"
+    check "$v tints nested pages (AB5 -> warn-soft)" grep -qE 'fill="#FDF5E8" class="[^"]*fill-AB5' "$SB/$v.svg"
+  done
+  check "colour-terminal variants use a monospace font" bash -c 'grep -qi mono "$1" && grep -qi mono "$2"' _ "$SB/theme-colour-terminal.svg" "$SB/theme-colour-terminal-dark.svg"
+  check "colour variant keeps Arial-style (no monospace)" bash -c '! grep -qi mono "$1"' _ "$SB/theme-colour.svg"
+  check "base theme leaves default containers untinted" bash -c '! grep -q "#E7EEF4" "$1"' _ "$SB/theme.svg"
+  check "dark colour variant differs from dark base" bash -c '! cmp -s "$1" "$2"' _ "$SB/theme-colour-dark.svg" "$SB/theme-dark.svg"
   env -u D2_LAYOUT d2 "$SB/theme.d2" "$SB/bare.svg" >/dev/null 2>&1
   d2 --layout tala "$SB/theme.d2" "$SB/tala.svg" >/dev/null 2>&1
   d2 --layout elk "$SB/theme.d2" "$SB/elk.svg" >/dev/null 2>&1
@@ -297,7 +315,7 @@ case_snippets() {
   local sn="$SB_CODE/snippets/d2.json" home v body
   home="$(native "$SB_HOME")"
   check "existing user snippet kept" json_true "$sn" '"my box" in d'
-  for v in theme theme-dark theme-terminal theme-terminal-dark; do
+  for v in theme theme-dark theme-terminal theme-terminal-dark theme-colour theme-colour-dark theme-colour-terminal theme-colour-terminal-dark; do
     check "d2$v body is the quoted absolute import" json_true "$sn" \
       "[s['body'] for s in d.values() if s.get('prefix') == 'd2$v'] == [['...@\"$home/.d2/themes/$v\"']]"
     if [ "$SYMLINKS" = 1 ] && command -v d2 >/dev/null 2>&1; then

@@ -9,12 +9,15 @@ d2/
 ├── theme-dark.d2           dark, Arial    ← import this on dark slides
 ├── theme-terminal.d2       light, Terminal look (monospace, UPPERCASE labels)
 ├── theme-terminal-dark.d2  dark, Terminal look
+├── theme-colour.d2         light, colour by default (shapes without a class get tinted)
+├── theme-colour-dark.d2    dark, colour by default
+├── theme-colour-terminal{,-dark}.d2   colour + Terminal look
 ├── core.d2                 shared defaults + classes (imported by the themes; do not import directly)
 ├── d2t.ps1                 Windows wrapper: Arial embedding + Tala layout
 ├── d2t.cmd                 Windows shim: runs d2t.ps1 with -ExecutionPolicy Bypass (used by the VS Code task)
 ├── d2t.sh                  macOS wrapper: Arial embedding + Tala layout
 ├── examples/               pipeline · fix-tiers · data-model
-└── previews/               rendered examples (svg + png), including pipeline-terminal{,-dark}
+└── previews/               rendered examples (svg + png), incl. pipeline-terminal{,-dark}, pipeline-colour{,-dark}, fix-tiers-colour
 ```
 
 ## 1. Use it
@@ -47,7 +50,8 @@ d2t --watch figures/pipeline.d2 figures/pipeline.svg   # live reload
 d2t --layout elk figures/pipeline.d2 figures/pipeline.svg   # --layout / -l / D2_LAYOUT override Tala
 ```
 
-Or from VS Code: `Ctrl+Shift+P` → **Tasks: Run Task** → **house-style: Export D2 to SVG (Tala + Arial)**.
+Or from VS Code: `Ctrl+Shift+P` → **Tasks: Run Task** → **house-style: Export D2 to SVG (Tala + Arial)**, or
+**house-style: Preview D2 (live, Tala + Arial)** for a browser view that reloads on every save.
 
 Put it in a slide: `![](figures/pipeline.svg)`. The background is transparent, so the figure sits on white,
 tint or dark slides, and the slide theme centres and fits it. Use a `-dark` theme on `dark`, `title` and
@@ -63,6 +67,23 @@ through `d2t` (which passes Arial). Pick it per diagram with the `d2theme-termin
 | Arial (`theme`) | Terminal (`theme-terminal`) |
 |---|---|
 | ![](previews/pipeline.png) | ![](previews/pipeline-terminal.png) |
+
+### Colour look
+
+`theme` is deliberately minimal: without a class, a shape is a white card on mist, and colour comes only from
+classes (section 4). `theme-colour` (and `-dark`, `-terminal`, `-terminal-dark`) adds colour **by default**,
+in the same soft tints the classes use:
+
+- lines and arrowheads: primary blue (light) / mint (dark)
+- containers: primary-soft at depth 1, secondary-soft (lilac) at depth 2; cards inside stay readable
+- cylinders: ok-soft (green); pages, steps, documents: warn-soft (amber); people: lilac; diamonds: amber
+
+Classes still win, so `primary-solid` still marks the one thing the slide is about. Use it for dense
+architecture diagrams that would otherwise be all grey; pick it with the `d2theme-colour` snippets.
+
+| Minimal (`theme`) | Colour (`theme-colour`) |
+|---|---|
+| ![](previews/fix-tiers.png) | ![](previews/fix-tiers-colour.png) |
 
 ## 2. Palette (the 12 hues you get)
 
@@ -114,8 +135,8 @@ slate border; a container is a mist box; depth 1 is mist and everything deeper i
   This theme overrides all 17 on top of the neutral theme 0, so nothing of the stock look remains.
 - **What each code colours** (checked by rendering): N7 background and depth-4+ fills; N1 text and table
   headers; N2 connection labels; B1 every stroke and arrowhead; B4/B5/B6 container fills by depth (B6 for a
-  top-level node); B2 table column names; B3 person; AA2 table types; AA4 cylinder/package; AB4
-  page/step/document; N4 diamond; N5 queue/hexagon. The theme sets the shape-specific codes to plain
+  top-level node); B2 table column names; B3 person; AA2 table types; AA4/AA5 cylinder/package (top level / nested); AB4/AB5
+  page/step/document (top level / nested); N4 diamond; N5 queue/hexagon. The theme sets the shape-specific codes to plain
   white/mist so every shape looks the same until you give it a class.
 - **Config in the file, flags win.** `d2-config` can set theme, layout engine and padding (this theme: Tala,
   pad 24); CLI flags and environment variables override it (`--layout elk`, `D2_LAYOUT=elk`). Tala is

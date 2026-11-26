@@ -35,7 +35,7 @@ D2_BIN_DIR="$D2_USER_DIR/bin"
 
 # Marp for VS Code only loads themes from https URLs or from paths inside the open workspace;
 # an absolute local path is silently dropped. So register the GitHub raw URLs of this repo.
-#   THEME_BASE_URL=<url>  folder holding phd.css / work.css (default: from the GitHub remote)
+#   THEME_BASE_URL=<url>  folder holding phd.css / work.css / classic.css (default: from the GitHub remote)
 #   GIT_REMOTE_URL=<url>  tests only: stands in for `git remote get-url origin`
 THEME_BASE="${THEME_BASE_URL:-}"
 THEME_BASE="${THEME_BASE%/}"
@@ -174,13 +174,13 @@ def report(what, path, result):
 
 
 # ---- settings.json ----
-house_themes = [os.environ["THEME_BASE"] + "/" + x for x in ("phd.css", "work.css")]
+house_themes = [os.environ["THEME_BASE"] + "/" + x for x in ("phd.css", "work.css", "classic.css")]
 
 
 def mutate_settings(s):
     existing = s.get("markdown.marp.themes") or []
     kept = [t for t in existing
-            if not any(str(t).replace("\\", "/").lower().endswith("/" + x) for x in ("dtp.css", "phd.css", "splice.css", "work.css"))]
+            if not any(str(t).replace("\\", "/").lower().endswith("/" + x) for x in ("dtp.css", "phd.css", "splice.css", "work.css", "classic.css"))]
     s["markdown.marp.themes"] = kept + house_themes
     s["markdown.marp.enableHtml"] = True
     # D2 extension (terrastruct.d2) preview layout; 'd2.layout' was a rev-1 key no extension reads
@@ -202,6 +202,26 @@ d2_task = {
     "presentation": {"reveal": "silent", "panel": "shared"},
     "problemMatcher": [],
 }
+# Live preview: d2t --watch serves a browser page that reloads on every save. d2t defaults to Tala,
+# so no --layout. Background matcher: one compile cycle = "info: compiling" or "info: detected change" .. success/err line;
+# d2 errors ("err: failed to compile x.d2: <path>:<line>:<col>: <msg>") go to the Problems panel.
+d2_preview_task = {
+    "label": "house-style: Preview D2 (live, Tala + Arial)",
+    "type": "shell",
+    "command": os.environ["D2_BIN_DIR"] + "/d2t",
+    "args": ["--watch", "${file}", "${fileDirname}/${fileBasenameNoExtension}.svg"],
+    "isBackground": True,
+    "presentation": {"reveal": "always", "panel": "dedicated"},
+    "problemMatcher": {
+        "owner": "d2",
+        "fileLocation": ["absolute"],
+        "pattern": {"regexp": r"^err: failed to compile .*?: (.*):(\d+):(\d+): (.*)$",
+                    "file": 1, "line": 2, "column": 3, "message": 4},
+        "background": {"activeBegin": True,
+                       "beginsPattern": r"^info: (compiling |detected change)",
+                       "endsPattern": r"^(success: successfully compiled |err: )"},
+    },
+}
 marp_task = {
     "label": "house-style: Export Marp Deck to PDF",
     "type": "shell",
@@ -219,14 +239,15 @@ marp_task = {
 def mutate_tasks(t):
     existing = [x for x in (t.get("tasks") or []) if not str(x.get("label", "")).startswith(LEGACY)]
     t.setdefault("version", "2.0.0")
-    t["tasks"] = existing + [d2_task, marp_task]
+    t["tasks"] = existing + [d2_task, d2_preview_task, marp_task]
     return t
 
 
 # ---- snippets/d2.json (spec section 5.3) ----
 # D2 does not expand ~ in imports, so the snippets insert a quoted absolute path for this machine.
 home_fwd = os.environ["HOME_DIR"].replace("\\", "/")
-VARIANTS = ("theme", "theme-dark", "theme-terminal", "theme-terminal-dark")
+VARIANTS = ("theme", "theme-dark", "theme-terminal", "theme-terminal-dark",
+            "theme-colour", "theme-colour-dark", "theme-colour-terminal", "theme-colour-terminal-dark")
 
 
 def mutate_snippets(sn):
@@ -350,8 +371,8 @@ echo "===================================================="
 echo "  Setup Complete!                                   "
 echo "===================================================="
 echo "Use in any workspace without per-repo configuration:"
-echo "1. Marp Slides: add 'theme: phd' or 'theme: work' to frontmatter."
-echo "2. D2 Diagrams: in a .d2 file type 'd2theme' (or d2theme-dark / d2theme-terminal / d2theme-terminal-dark);"
+echo "1. Marp Slides: add 'theme: phd', 'theme: work' or 'theme: classic' to frontmatter."
+echo "2. D2 Diagrams: in a .d2 file type 'd2theme' (or d2theme-dark / -terminal / -colour ... variants);"
 echo "   the import line for this machine is printed above."
 echo "3. Export: run 'Ctrl+Shift+P' (Cmd+Shift+P) -> 'Tasks: Run Task' -> export."
 echo ""

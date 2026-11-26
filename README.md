@@ -9,16 +9,19 @@ house-style/
 ├── setup.sh                    One-step setup for macOS (bash)
 ├── themes/                     Marp slide themes
 │   ├── phd.css                 slate/blue palette, for PhD and academic decks
-│   └── work.css                purple-led palette, for work decks
+│   ├── work.css                purple-led palette, for work decks
+│   └── classic.css             simple academic look: Century Gothic + Calibri, logos on the title slide
 ├── d2/                         D2 diagram themes and the d2t wrapper (see d2/README.md)
 │   ├── theme.d2 / theme-dark.d2                    Arial look, light / dark
 │   ├── theme-terminal.d2 / theme-terminal-dark.d2  Terminal look (monospace, UPPERCASE)
+│   ├── theme-colour*.d2        colour by default (light, dark, + Terminal)
 │   ├── core.d2                 shared classes and geometry
 │   ├── d2t.ps1 · d2t.cmd · d2t.sh   render with Arial embedded + Tala layout
 │   └── examples/  previews/
 ├── examples/                   starter decks
 │   ├── phd_starter_deck.md
-│   └── work_starter_deck.md
+│   ├── work_starter_deck.md
+│   └── classic_starter_deck.md
 ├── tests/                      setup tests (run in a throwaway sandbox)
 └── icons-placeholder.png       stand-in image used by the starter decks
 ```
@@ -40,15 +43,15 @@ chmod +x ./setup.sh && ./setup.sh                        # macOS
 
 What it does (safe to re-run; a second run changes nothing):
 
-1. **VS Code User Settings:** registers `phd` and `work` in `markdown.marp.themes`, enables Marp
+1. **VS Code User Settings:** registers `phd`, `work` and `classic` in `markdown.marp.themes`, enables Marp
    HTML, and sets the D2 preview layout (`D2.previewLayout`) to `tala`. The themes are registered as
    `raw.githubusercontent.com` URLs built from this repo's GitHub remote, because Marp for VS Code ignores
    local paths outside the open workspace. So the repo must be public, and the preview needs a network
    connection. Use `-ThemeBaseUrl <url>` (`THEME_BASE_URL=<url>` on macOS) to point elsewhere.
-2. **VS Code User Tasks:** adds **house-style: Export Marp Deck to PDF** and
-   **house-style: Export D2 to SVG (Tala + Arial)**.
-3. **VS Code snippets:** typing `d2theme`, `d2theme-dark`, `d2theme-terminal` or `d2theme-terminal-dark` in a
-   `.d2` file inserts the theme import for this machine.
+2. **VS Code User Tasks:** adds **house-style: Export Marp Deck to PDF**,
+   **house-style: Export D2 to SVG (Tala + Arial)** and **house-style: Preview D2 (live, Tala + Arial)**.
+3. **VS Code snippets:** typing `d2theme` in a `.d2` file offers eight imports for this machine: `d2theme`,
+   `-dark`, `-terminal`, `-terminal-dark`, and the same four for `d2theme-colour`.
 4. **`~/.d2/themes`:** a junction (Windows) or symlink (macOS) to this repo's `d2/` folder.
 5. **`d2t`:** installed to `~/.d2/bin`. On Windows that folder is also added to your User PATH (restart
    VS Code and terminals afterwards); on macOS setup prints the line to add to your shell profile.
@@ -64,7 +67,7 @@ In any repo, start a deck with front matter:
 ```markdown
 ---
 marp: true
-theme: phd        # or: work
+theme: phd        # or: work, classic
 paginate: true
 footer: "Lab / Project"
 ---
@@ -77,12 +80,12 @@ ignores VS Code's theme list and silently exports in its default theme.
 
 Starting a new deck:
 
-1. Copy `examples/phd_starter_deck.md` (or `work_starter_deck.md`) into the repo.
+1. Copy `examples/phd_starter_deck.md` (or the `work` / `classic` one) into the repo.
 2. Edit the front matter: `theme`, `footer`.
 3. Replace the slide content; keep one layout per slide: `<!-- _class: tint cards -->`.
 4. Figures: use paths relative to the deck, e.g. `![](../figures/fig2.png)`.
 
-Theme names must stay unique (`phd`, `work`), because Marp registers them by the `@theme` line.
+Theme names must stay unique (`phd`, `work`, `classic`), because Marp registers them by the `@theme` line.
 
 ## 3. Diagrams
 
@@ -109,6 +112,10 @@ d2t --watch figure.d2 figure.svg     # live reload
 d2t --layout elk figure.d2 figure.svg   # any d2 flag works; --layout / D2_LAYOUT override Tala
 ```
 
+Live preview with the export look: **Tasks: Run Task** → **house-style: Preview D2 (live, Tala + Arial)**. It
+opens a browser page that reloads on every save and writes the same `.svg`; stop it with **Tasks: Terminate
+Task**. D2 errors appear in the Problems panel.
+
 Then put it on a slide: `![](figures/figure.svg)`. Palette, classes and the Terminal variants are described
 in [d2/README.md](d2/README.md).
 
@@ -127,7 +134,8 @@ run setup there.
 ## 5. Keeping the themes in step
 
 `phd.css` and `work.css` share one structure; only the tokens block (palette, fonts, title size, logos)
-differs. When you change a layout in one, make the same change in the other.
+differs. When you change a layout in one, make the same change in the other. `classic.css` has its own,
+simpler structure and layouts (`section`, `picture`, `blank`); it is kept as it is.
 
 ## 6. Tests
 
